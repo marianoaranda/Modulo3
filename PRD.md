@@ -125,6 +125,7 @@ la lista de artículos que hace falta pedir según los siguientes criterios:
 
 ## Fuera de Alcance
 - Queda fuera de alcance el manejo de múltiples proveedores por artículo.
+- Queda afuera la generacion de ordenes de compra 
 
 ## Riesgos y Dependencias
 - Riesgo: Que haya más de 10000 artículos. Mitigación: limitar las consultas con TOP 10000 y agregar filtro opcional por descripción con LIKE '%%'.
