@@ -124,8 +124,9 @@ la lista de artículos que hace falta pedir según los siguientes criterios:
 - AC-30 (RF-13): Dado un error de ejecución en el sistema, Cuando este ocurre, Entonces sus datos quedan grabados en la tabla de errores.
 
 ## Fuera de Alcance
+- Queda fuera de alcance la carga de proveedores (Alata, Baja y Modificacion)
 - Queda fuera de alcance el manejo de múltiples proveedores por artículo.
-- Queda afuera la generacion de ordenes de compra 
+- Queda fuera de alcance la generacion de ordenes de compra 
 
 ## Riesgos y Dependencias
 - Riesgo: Que haya más de 10000 artículos. Mitigación: limitar las consultas con TOP 10000 y agregar filtro opcional por descripción con LIKE '%%'.
