@@ -1,0 +1,49 @@
+services:
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2017-latest
+    environment:
+      ACCEPT_EULA: "Y"
+      SA_PASSWORD: "Stock_Dev_2024!"
+      MSSQL_PID: "Developer"
+    ports:
+      - "1433:1433"
+    volumes:
+      - sqlserver-data:/var/opt/mssql
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P \"$$SA_PASSWORD\" -Q 'SELECT 1' || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build:
+      context: .
+      dockerfile: src/Stock.Api/Dockerfile
+    environment:
+      ASPNETCORE_ENVIRONMENT: "Development"
+      # El puerto 8080 ya viene de la imagen base (ASPNETCORE_HTTP_PORTS).
+      # Dentro de la red de compose la base se resuelve por el nombre del servicio.
+      ConnectionStrings__StockDb: "Server=sqlserver,1433;Database=StockModulo;User Id=sa;Password=Stock_Dev_2024!;TrustServerCertificate=True;MultipleActiveResultSets=True"
+      # Sólo acá: en compose la base arranca vacía y nadie más va a migrarla.
+      ApplyMigrationsOnStartup: "true"
+    ports:
+      - "5279:8080"
+    depends_on:
+      sqlserver:
+        condition: service_healthy
+
+  web:
+    build:
+      context: .
+      dockerfile: src/Stock.Web/Dockerfile
+    environment:
+      ASPNETCORE_ENVIRONMENT: "Development"
+      # El que llama a la API es el servidor Web, así que resuelve por red interna.
+      ApiBaseUrl: "http://api:8080/"
+    ports:
+      - "5280:8080"
+    depends_on:
+      - api
+
+volumes:
+  sqlserver-data:

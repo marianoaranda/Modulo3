@@ -16,13 +16,15 @@ infiere automáticamente qué artículos hace falta pedir (por stock mínimo, pu
 # Instalar dependencias
 dotnet restore StockModulo.sln
 
-# Levantar todo (SQL Server + API + Web) con Docker
-docker-compose up
+# Levantar todo (SQL Server + API + Web) con Docker.
+# La API migra y siembra la base sola (flag ApplyMigrationsOnStartup, sólo en compose).
+# Web en http://localhost:5280, API en http://localhost:5279, usuario admin / Admin1234.
+docker compose up -d --build
 
-# Aplicar migraciones de base de datos
+# Aplicar migraciones de base de datos (necesario sólo fuera de Docker)
 dotnet ef database update --project src/Stock.Api
 
-# Correr Front y Back en local sin Docker
+# Correr Front y Back en local sin Docker (requiere el SQL Server de compose)
 dotnet run --project src/Stock.Api
 dotnet run --project src/Stock.Web
 
