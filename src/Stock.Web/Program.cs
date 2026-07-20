@@ -6,12 +6,16 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllersWithViews();
 
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddTransient<JwtTokenHandler>();
+
 builder.Services.AddHttpClient(StockApiClient.HttpClientName, client =>
 {
     var baseUrl = builder.Configuration["ApiBaseUrl"]
                   ?? throw new InvalidOperationException("Falta la configuración 'ApiBaseUrl'.");
     client.BaseAddress = new Uri(baseUrl);
-});
+})
+.AddHttpMessageHandler<JwtTokenHandler>();
 builder.Services.AddScoped<IStockApiClient, StockApiClient>();
 
 builder.Services

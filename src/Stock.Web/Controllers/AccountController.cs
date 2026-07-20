@@ -4,15 +4,13 @@ using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Stock.Web.Models;
+using Stock.Web.Security;
 using Stock.Web.Services;
 
 namespace Stock.Web.Controllers;
 
 public class AccountController : Controller
 {
-    /// <summary>Nombre del claim donde guardamos el JWT para reusarlo en las llamadas a la API.</summary>
-    public const string TokenClaim = "stock:jwt";
-
     private readonly IStockApiClient _api;
 
     public AccountController(IStockApiClient api) => _api = api;
@@ -46,7 +44,7 @@ public class AccountController : Controller
                 new Claim(ClaimTypes.Name, model.Usuario),
                 new Claim(ClaimTypes.GivenName, sesion.NombreCompleto),
                 new Claim(ClaimTypes.Role, sesion.Perfil),
-                new Claim(TokenClaim, sesion.Token)
+                new Claim(SessionClaims.Token, sesion.Token)
             },
             CookieAuthenticationDefaults.AuthenticationScheme);
 

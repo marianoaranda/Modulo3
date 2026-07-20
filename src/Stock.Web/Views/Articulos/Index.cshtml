@@ -1,0 +1,68 @@
+@model IReadOnlyList<Stock.Web.Services.ArticuloDto>
+@{
+    ViewData["Title"] = "Artículos";
+    var descripcion = ViewData["Descripcion"] as string;
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h1 class="h3 mb-0">Artículos</h1>
+    <a asp-action="Create" class="btn btn-primary">Nuevo artículo</a>
+</div>
+
+@if (TempData["Mensaje"] is string mensaje)
+{
+    <div class="alert alert-success">@mensaje</div>
+}
+
+<form asp-action="Index" method="get" class="row g-2 mb-3">
+    <div class="col-auto">
+        <input name="descripcion" value="@descripcion" class="form-control" placeholder="Filtrar por descripción" />
+    </div>
+    <div class="col-auto">
+        <button type="submit" class="btn btn-outline-secondary">Buscar</button>
+    </div>
+</form>
+
+@if (Model.Count == 0)
+{
+    <p class="text-muted">No hay artículos que mostrar.</p>
+}
+else
+{
+    <div class="table-responsive">
+        <table class="table table-striped align-middle">
+            <thead>
+                <tr>
+                    <th>Código</th>
+                    <th>Descripción</th>
+                    <th class="text-end">P. Costo</th>
+                    <th class="text-end">Margen</th>
+                    <th class="text-end">P. Venta</th>
+                    <th class="text-end">Mín.</th>
+                    <th class="text-end">Punto</th>
+                    <th class="text-end">Ideal</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var a in Model)
+                {
+                    <tr>
+                        <td>@a.Codigo</td>
+                        <td>@a.Descripcion</td>
+                        <td class="text-end">@a.PrecioCosto.ToString("N2")</td>
+                        <td class="text-end">@a.Margen.ToString("N2")%</td>
+                        <td class="text-end">@a.PrecioVenta.ToString("N2")</td>
+                        <td class="text-end">@a.StockMinimo</td>
+                        <td class="text-end">@a.PuntoPedido</td>
+                        <td class="text-end">@a.StockIdeal</td>
+                        <td class="text-end text-nowrap">
+                            <a asp-action="Edit" asp-route-id="@a.ArticuloId" class="btn btn-sm btn-outline-primary">Editar</a>
+                            <a asp-action="Delete" asp-route-id="@a.ArticuloId" class="btn btn-sm btn-outline-danger">Eliminar</a>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}

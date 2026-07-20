@@ -1,0 +1,22 @@
+@model Stock.Web.Models.ArticuloViewModel
+@{
+    ViewData["Title"] = "Eliminar artículo";
+}
+
+<h1 class="h3 mb-4">Eliminar artículo</h1>
+
+<p>¿Confirmás la baja del siguiente artículo?</p>
+
+<dl class="row">
+    <dt class="col-sm-3">Código</dt>
+    <dd class="col-sm-9">@Model.Codigo</dd>
+    <dt class="col-sm-3">Descripción</dt>
+    <dd class="col-sm-9">@Model.Descripcion</dd>
+    <dt class="col-sm-3">Precio de Venta</dt>
+    <dd class="col-sm-9">@Model.PrecioVenta.ToString("N2")</dd>
+</dl>
+
+<form asp-action="Delete" asp-route-id="@Model.ArticuloId" method="post">
+    <button type="submit" class="btn btn-danger">Eliminar</button>
+    <a asp-action="Index" class="btn btn-outline-secondary">Cancelar</a>
+</form>
