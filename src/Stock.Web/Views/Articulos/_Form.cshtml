@@ -48,3 +48,23 @@
     </div>
 </div>
 <div class="form-text mt-2">Debe cumplirse Stock Mínimo ≤ Punto de Pedido ≤ Stock Ideal.</div>
+
+@* Cálculo interactivo del Precio de Venta: sólo para que el usuario vea el resultado
+   mientras edita. El valor definitivo lo calcula la API al guardar (RF-16). *@
+<script>
+    (function () {
+        var costo = document.getElementById("PrecioCosto");
+        var margen = document.getElementById("Margen");
+        var venta = document.getElementById("PrecioVenta");
+        if (!costo || !margen || !venta) return;
+
+        function recalcular() {
+            var c = parseFloat(costo.value);
+            var m = parseFloat(margen.value);
+            venta.value = (isNaN(c) || isNaN(m)) ? "" : (c * (1 + m / 100)).toFixed(2);
+        }
+
+        costo.addEventListener("input", recalcular);
+        margen.addEventListener("input", recalcular);
+    })();
+</script>
