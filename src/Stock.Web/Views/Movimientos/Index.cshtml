@@ -1,0 +1,52 @@
+@model IReadOnlyList<Stock.Web.Services.MovimientoDto>
+@{
+    ViewData["Title"] = "Movimientos";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h1 class="h3 mb-0">Movimientos</h1>
+    <a asp-action="Create" class="btn btn-primary">Nuevo movimiento</a>
+</div>
+
+@if (TempData["Mensaje"] is string mensaje)
+{
+    <div class="alert alert-success">@mensaje</div>
+}
+
+@if (Model.Count == 0)
+{
+    <p class="text-muted">No hay movimientos que mostrar.</p>
+}
+else
+{
+    <div class="table-responsive">
+        <table class="table table-striped align-middle">
+            <thead>
+                <tr>
+                    <th>Tipo</th>
+                    <th class="text-end">Número</th>
+                    <th>Fecha</th>
+                    <th class="text-end">Líneas</th>
+                    <th class="text-end">Total</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var m in Model)
+                {
+                    <tr>
+                        <td>@m.Tipo</td>
+                        <td class="text-end">@m.Numero</td>
+                        <td>@m.Fecha.ToString("dd/MM/yyyy")</td>
+                        <td class="text-end">@m.Detalles.Count</td>
+                        <td class="text-end">@m.Detalles.Sum(d => d.PrecioTotal).ToString("N2")</td>
+                        <td class="text-end text-nowrap">
+                            <a asp-action="Edit" asp-route-id="@m.MovimientoId" class="btn btn-sm btn-outline-primary">Editar</a>
+                            <a asp-action="Delete" asp-route-id="@m.MovimientoId" class="btn btn-sm btn-outline-danger">Eliminar</a>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}

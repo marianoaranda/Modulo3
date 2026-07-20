@@ -10,6 +10,8 @@ public class AppDbContext : DbContext
     public DbSet<Perfil> Perfiles => Set<Perfil>();
     public DbSet<Usuario> Usuarios => Set<Usuario>();
     public DbSet<Articulo> Articulos => Set<Articulo>();
+    public DbSet<Movimiento> Movimientos => Set<Movimiento>();
+    public DbSet<MovimientoDetalle> MovimientoDetalles => Set<MovimientoDetalle>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -46,6 +48,31 @@ public class AppDbContext : DbContext
             e.Property(a => a.Margen).HasColumnType("decimal(9,2)");
             // PrecioVenta se deriva de Costo y Margen (RF-16): no es columna.
             e.Ignore(a => a.PrecioVenta);
+        });
+
+        modelBuilder.Entity<Movimiento>(e =>
+        {
+            e.ToTable("Movimientos");
+            e.HasKey(m => m.MovimientoId);
+            e.Property(m => m.Tipo).HasConversion<int>();
+            // Detalle en cascada: dar de baja el encabezado elimina sus líneas (RF-21).
+            e.HasMany(m => m.Detalles)
+             .WithOne(d => d.Movimiento)
+             .HasForeignKey(d => d.MovimientoId)
+             .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<MovimientoDetalle>(e =>
+        {
+            e.ToTable("MovimientoDetalles");
+            e.HasKey(d => d.MovimientoDetalleId);
+            e.Property(d => d.PrecioUnitario).HasColumnType("decimal(18,2)");
+            e.Property(d => d.PrecioTotal).HasColumnType("decimal(18,2)");
+            // No permitimos borrar un artículo que tenga movimientos: el saldo dejaría de cerrar.
+            e.HasOne(d => d.Articulo)
+             .WithMany()
+             .HasForeignKey(d => d.ArticuloId)
+             .OnDelete(DeleteBehavior.Restrict);
         });
     }
 }

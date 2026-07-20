@@ -20,6 +20,17 @@ public interface IStockApiClient
     Task<GuardarArticuloResultado> ModificarArticuloAsync(int id, ArticuloPayload articulo, CancellationToken ct = default);
 
     Task EliminarArticuloAsync(int id, CancellationToken ct = default);
+
+    Task<IReadOnlyList<MovimientoDto>> ListarMovimientosAsync(CancellationToken ct = default);
+
+    /// <summary>Devuelve el movimiento, o null si no existe.</summary>
+    Task<MovimientoDto?> ObtenerMovimientoAsync(int id, CancellationToken ct = default);
+
+    Task<GuardarMovimientoResultado> CrearMovimientoAsync(MovimientoPayload movimiento, CancellationToken ct = default);
+
+    Task<GuardarMovimientoResultado> ModificarMovimientoAsync(int id, MovimientoPayload movimiento, CancellationToken ct = default);
+
+    Task EliminarMovimientoAsync(int id, CancellationToken ct = default);
 }
 
 public class StockApiClient : IStockApiClient
@@ -85,6 +96,55 @@ public class StockApiClient : IStockApiClient
         respuesta.EnsureSuccessStatusCode();
     }
 
+    public async Task<IReadOnlyList<MovimientoDto>> ListarMovimientosAsync(CancellationToken ct = default)
+    {
+        var movimientos = await _http.GetFromJsonAsync<List<MovimientoDto>>("api/movimientos", ct);
+        return movimientos ?? new List<MovimientoDto>();
+    }
+
+    public async Task<MovimientoDto?> ObtenerMovimientoAsync(int id, CancellationToken ct = default)
+    {
+        var respuesta = await _http.GetAsync($"api/movimientos/{id}", ct);
+
+        if (respuesta.StatusCode == HttpStatusCode.NotFound)
+        {
+            return null;
+        }
+
+        respuesta.EnsureSuccessStatusCode();
+        return await respuesta.Content.ReadFromJsonAsync<MovimientoDto>(cancellationToken: ct);
+    }
+
+    public async Task<GuardarMovimientoResultado> CrearMovimientoAsync(MovimientoPayload movimiento, CancellationToken ct = default)
+    {
+        var respuesta = await _http.PostAsJsonAsync("api/movimientos", movimiento, ct);
+        if (await EsRechazoDeValidacion(respuesta, ct) is { } errores)
+        {
+            return GuardarMovimientoResultado.Invalido(errores);
+        }
+
+        respuesta.EnsureSuccessStatusCode();
+        return GuardarMovimientoResultado.Ok((await respuesta.Content.ReadFromJsonAsync<MovimientoDto>(cancellationToken: ct))!);
+    }
+
+    public async Task<GuardarMovimientoResultado> ModificarMovimientoAsync(int id, MovimientoPayload movimiento, CancellationToken ct = default)
+    {
+        var respuesta = await _http.PutAsJsonAsync($"api/movimientos/{id}", movimiento, ct);
+        if (await EsRechazoDeValidacion(respuesta, ct) is { } errores)
+        {
+            return GuardarMovimientoResultado.Invalido(errores);
+        }
+
+        respuesta.EnsureSuccessStatusCode();
+        return GuardarMovimientoResultado.Ok((await respuesta.Content.ReadFromJsonAsync<MovimientoDto>(cancellationToken: ct))!);
+    }
+
+    public async Task EliminarMovimientoAsync(int id, CancellationToken ct = default)
+    {
+        var respuesta = await _http.DeleteAsync($"api/movimientos/{id}", ct);
+        respuesta.EnsureSuccessStatusCode();
+    }
+
     /// <summary>
     /// Traduce la respuesta de guardar: 400 lo tomamos como rechazo por reglas de
     /// negocio y extraemos los errores del ProblemDetails; cualquier otro fallo se
@@ -92,15 +152,26 @@ public class StockApiClient : IStockApiClient
     /// </summary>
     private static async Task<GuardarArticuloResultado> InterpretarGuardado(HttpResponseMessage respuesta, CancellationToken ct)
     {
-        if (respuesta.StatusCode == HttpStatusCode.BadRequest)
+        if (await EsRechazoDeValidacion(respuesta, ct) is { } errores)
         {
-            var problema = await respuesta.Content.ReadFromJsonAsync<ValidationProblemResponse>(cancellationToken: ct);
-            return GuardarArticuloResultado.Invalido(problema?.Errors ?? new Dictionary<string, string[]>());
+            return GuardarArticuloResultado.Invalido(errores);
         }
 
         respuesta.EnsureSuccessStatusCode();
         var articulo = await respuesta.Content.ReadFromJsonAsync<ArticuloDto>(cancellationToken: ct);
         return GuardarArticuloResultado.Ok(articulo!);
+    }
+
+    /// <summary>Si la respuesta es un 400 de validación, devuelve los errores por campo; si no, null.</summary>
+    private static async Task<IReadOnlyDictionary<string, string[]>?> EsRechazoDeValidacion(HttpResponseMessage respuesta, CancellationToken ct)
+    {
+        if (respuesta.StatusCode != HttpStatusCode.BadRequest)
+        {
+            return null;
+        }
+
+        var problema = await respuesta.Content.ReadFromJsonAsync<ValidationProblemResponse>(cancellationToken: ct);
+        return problema?.Errors ?? new Dictionary<string, string[]>();
     }
 
     /// <summary>Forma mínima del ProblemDetails de validación que emite ASP.NET.</summary>
