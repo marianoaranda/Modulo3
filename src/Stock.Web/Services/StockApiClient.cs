@@ -18,6 +18,9 @@ public interface IStockApiClient
     /// <summary>Busca un artículo por su Código; null si no existe. Usado en la carga de movimientos.</summary>
     Task<ArticuloDto?> ObtenerArticuloPorCodigoAsync(string codigo, CancellationToken ct = default);
 
+    /// <summary>Primer y último código del catálogo, para sugerir el rango de la Consulta de Stock Actual.</summary>
+    Task<RangoCodigosDto> ObtenerRangoCodigosAsync(CancellationToken ct = default);
+
     Task<GuardarArticuloResultado> CrearArticuloAsync(ArticuloPayload articulo, CancellationToken ct = default);
 
     Task<GuardarArticuloResultado> ModificarArticuloAsync(int id, ArticuloPayload articulo, CancellationToken ct = default);
@@ -37,6 +40,10 @@ public interface IStockApiClient
     Task<GuardarMovimientoResultado> ModificarMovimientoAsync(int id, MovimientoPayload movimiento, CancellationToken ct = default);
 
     Task EliminarMovimientoAsync(int id, CancellationToken ct = default);
+
+    /// <summary>Consulta de Stock Actual (RF-25): saldo por artículo en un rango de códigos.</summary>
+    Task<IReadOnlyList<StockActualDto>> ConsultarStockActualAsync(
+        string? codigoInicial = null, string? codigoFinal = null, CancellationToken ct = default);
 }
 
 public class StockApiClient : IStockApiClient
@@ -95,6 +102,12 @@ public class StockApiClient : IStockApiClient
 
         respuesta.EnsureSuccessStatusCode();
         return await respuesta.Content.ReadFromJsonAsync<ArticuloDto>(cancellationToken: ct);
+    }
+
+    public async Task<RangoCodigosDto> ObtenerRangoCodigosAsync(CancellationToken ct = default)
+    {
+        var rango = await _http.GetFromJsonAsync<RangoCodigosDto>("api/articulos/rango-codigos", ct);
+        return rango ?? new RangoCodigosDto(null, null);
     }
 
     public async Task<GuardarArticuloResultado> CrearArticuloAsync(ArticuloPayload articulo, CancellationToken ct = default)
@@ -168,6 +181,24 @@ public class StockApiClient : IStockApiClient
     {
         var respuesta = await _http.DeleteAsync($"api/movimientos/{id}", ct);
         respuesta.EnsureSuccessStatusCode();
+    }
+
+    public async Task<IReadOnlyList<StockActualDto>> ConsultarStockActualAsync(
+        string? codigoInicial = null, string? codigoFinal = null, CancellationToken ct = default)
+    {
+        var parametros = new List<string>();
+        if (!string.IsNullOrWhiteSpace(codigoInicial))
+        {
+            parametros.Add($"codigoInicial={Uri.EscapeDataString(codigoInicial)}");
+        }
+        if (!string.IsNullOrWhiteSpace(codigoFinal))
+        {
+            parametros.Add($"codigoFinal={Uri.EscapeDataString(codigoFinal)}");
+        }
+
+        var url = "api/stock/actual" + (parametros.Count > 0 ? "?" + string.Join("&", parametros) : string.Empty);
+        var filas = await _http.GetFromJsonAsync<List<StockActualDto>>(url, ct);
+        return filas ?? new List<StockActualDto>();
     }
 
     /// <summary>

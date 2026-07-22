@@ -6,4 +6,9 @@
     <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>
 
+  <ItemGroup>
+    <!-- Generación de los .xlsx de las consultas exportables (RF-25, RF-26). -->
+    <PackageReference Include="ClosedXML" Version="0.104.2" />
+  </ItemGroup>
+
 </Project>

@@ -46,6 +46,18 @@ public class ArticulosController : ControllerBase
         return articulo is null ? NotFound() : Ok(ToResponse(articulo));
     }
 
+    /// <summary>Primer y último código del catálogo, para sugerir el rango de la Consulta de Stock Actual.</summary>
+    [HttpGet("rango-codigos")]
+    public async Task<ActionResult<RangoCodigosResponse>> RangoCodigos(CancellationToken ct)
+    {
+        var primero = await _db.Articulos.AsNoTracking()
+            .OrderBy(a => a.Codigo).Select(a => a.Codigo).FirstOrDefaultAsync(ct);
+        var ultimo = await _db.Articulos.AsNoTracking()
+            .OrderByDescending(a => a.Codigo).Select(a => a.Codigo).FirstOrDefaultAsync(ct);
+
+        return Ok(new RangoCodigosResponse(primero, ultimo));
+    }
+
     /// <summary>
     /// Búsqueda puntual por Código para la carga de movimientos: el formulario la usa
     /// para mostrar la descripción y sugerir el precio (costo o venta) al tipear el código.

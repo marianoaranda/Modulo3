@@ -1,0 +1,90 @@
+@model Stock.Web.Models.StockActualViewModel
+@{
+    ViewData["Title"] = "Consulta de Stock Actual";
+}
+
+<h1 class="h3 mb-4">Consulta de Stock Actual</h1>
+
+<form asp-action="Index" method="get" class="row g-2 align-items-end mb-3">
+    <input type="hidden" name="consultar" value="true" />
+    <div class="col-auto">
+        <label asp-for="CodigoInicial" class="form-label"></label>
+        <div class="input-group">
+            <input asp-for="CodigoInicial" class="form-control" placeholder="Desde código" />
+            <button type="button" class="btn btn-outline-secondary buscar-articulo-stock" data-target="CodigoInicial" title="Buscar artículo" tabindex="-1">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001q.044.06.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1 1 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0"/></svg>
+            </button>
+        </div>
+    </div>
+    <div class="col-auto">
+        <label asp-for="CodigoFinal" class="form-label"></label>
+        <div class="input-group">
+            <input asp-for="CodigoFinal" class="form-control" placeholder="Hasta código" />
+            <button type="button" class="btn btn-outline-secondary buscar-articulo-stock" data-target="CodigoFinal" title="Buscar artículo" tabindex="-1">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001q.044.06.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1 1 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0"/></svg>
+            </button>
+        </div>
+    </div>
+    <div class="col-auto">
+        <button type="submit" class="btn btn-primary">Consultar</button>
+    </div>
+    @if (Model.Consultado && Model.Filas.Count > 0)
+    {
+        <div class="col-auto">
+            <a asp-action="ExportarExcel"
+               asp-route-codigoInicial="@Model.CodigoInicial"
+               asp-route-codigoFinal="@Model.CodigoFinal"
+               class="btn btn-outline-success">Exportar a Excel</a>
+        </div>
+    }
+</form>
+
+@if (Model.Consultado)
+{
+    @if (Model.Filas.Count == 0)
+    {
+        <p class="text-muted">No hay artículos en el rango indicado.</p>
+    }
+    else
+    {
+        <div class="table-responsive">
+            <table class="table table-striped align-middle">
+                <thead>
+                    <tr>
+                        <th>Código</th>
+                        <th>Descripción</th>
+                        <th class="text-end">Cantidad</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var fila in Model.Filas)
+                    {
+                        <tr>
+                            <td>@fila.Codigo</td>
+                            <td>@fila.Descripcion</td>
+                            <td class="text-end">@fila.Cantidad</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+}
+else
+{
+    <p class="text-muted">Ingresá un rango de artículos (o dejalo vacío para ver todos) y presioná Consultar.</p>
+}
+
+@* Mismo pop-up de búsqueda que la carga de movimientos. *@
+<partial name="_BuscarArticuloModal" />
+
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        document.querySelectorAll(".buscar-articulo-stock").forEach(function (boton) {
+            boton.addEventListener("click", function () {
+                var input = document.getElementById(boton.getAttribute("data-target"));
+                window.BuscarArticulo.abrir(input);
+            });
+        });
+    });
+</script>

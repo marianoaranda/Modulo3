@@ -167,6 +167,29 @@ public class ArticulosEndpointsTests
         Assert.That(respuesta.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
     }
 
+    [Test]
+    public async Task RangoCodigos_DevuelveElPrimeroYElUltimoPorCodigo()
+    {
+        // Alimenta el prellenado del rango en la Consulta de Stock Actual.
+        await CrearAsync(ArticuloValido("B002"));
+        await CrearAsync(ArticuloValido("A001"));
+        await CrearAsync(ArticuloValido("C003"));
+
+        var rango = await _client.GetFromJsonAsync<RangoCodigos>("/api/articulos/rango-codigos");
+
+        Assert.That(rango!.Primero, Is.EqualTo("A001"));
+        Assert.That(rango.Ultimo, Is.EqualTo("C003"));
+    }
+
+    [Test]
+    public async Task RangoCodigos_SinArticulos_DevuelveNulos()
+    {
+        var rango = await _client.GetFromJsonAsync<RangoCodigos>("/api/articulos/rango-codigos");
+
+        Assert.That(rango!.Primero, Is.Null);
+        Assert.That(rango.Ultimo, Is.Null);
+    }
+
     private async Task<ArticuloResponse> CrearAsync(ArticuloRequest request)
     {
         var respuesta = await _client.PostAsJsonAsync("/api/articulos", request);
@@ -187,6 +210,7 @@ public class ArticulosEndpointsTests
     }
 
     private record LoginPayload(string Token, DateTime ExpiraUtc, string NombreCompleto, string Perfil);
+    private record RangoCodigos(string? Primero, string? Ultimo);
 
     /// <summary>Espejo local de Stock.Api.Contracts.ArticuloRequest para armar los cuerpos.</summary>
     private record ArticuloRequest(

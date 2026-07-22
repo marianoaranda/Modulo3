@@ -20,6 +20,9 @@ public record ArticuloRequest
     public int StockIdeal { get; init; }
 }
 
+/// <summary>Primer y último código del catálogo, para sugerir el rango de la Consulta de Stock Actual.</summary>
+public record RangoCodigosResponse(string? Primero, string? Ultimo);
+
 public record ArticuloResponse(
     int ArticuloId,
     string Codigo,
