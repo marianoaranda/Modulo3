@@ -24,6 +24,9 @@ public record MovimientoDetalleRequest
     public decimal PrecioUnitario { get; init; }
 }
 
+/// <summary>Próximo número correlativo sugerido para el alta de un movimiento.</summary>
+public record SiguienteNumeroResponse(int Numero);
+
 public record MovimientoResponse(
     int MovimientoId,
     TipoMovimiento Tipo,

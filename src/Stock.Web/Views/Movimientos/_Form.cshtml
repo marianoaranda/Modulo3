@@ -22,7 +22,10 @@
 
 <h2 class="h5">Detalle</h2>
 <div class="table-responsive">
-    <table class="table align-middle" id="tabla-detalle" data-lookup-url="@Url.Action("BuscarArticulo", "Movimientos")">
+    <table class="table align-middle"
+           id="tabla-detalle"
+           data-lookup-url="@Url.Action("BuscarArticulo", "Movimientos")"
+           data-buscar-url="@Url.Action("BuscarArticulos", "Movimientos")">
         <thead>
             <tr>
                 <th style="width:30%">Código</th>
@@ -37,7 +40,12 @@
             {
                 <tr class="linea-detalle">
                     <td>
-                        <input name="Detalles[@i].Codigo" value="@Model.Detalles[i].Codigo" class="form-control codigo" autocomplete="off" />
+                        <div class="input-group">
+                            <input name="Detalles[@i].Codigo" value="@Model.Detalles[i].Codigo" class="form-control codigo" autocomplete="off" />
+                            <button type="button" class="btn btn-outline-secondary buscar-articulo" title="Buscar artículo" tabindex="-1">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001q.044.06.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1 1 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0"/></svg>
+                            </button>
+                        </div>
                         <div class="form-text descripcion-articulo"></div>
                     </td>
                     <td><input name="Detalles[@i].Cantidad" value="@Model.Detalles[i].Cantidad" class="form-control cantidad" type="number" min="1" /></td>
@@ -63,7 +71,12 @@
 <template id="plantilla-linea">
     <tr class="linea-detalle">
         <td>
-            <input name="Detalles[__INDEX__].Codigo" class="form-control codigo" autocomplete="off" />
+            <div class="input-group">
+                <input name="Detalles[__INDEX__].Codigo" class="form-control codigo" autocomplete="off" />
+                <button type="button" class="btn btn-outline-secondary buscar-articulo" title="Buscar artículo" tabindex="-1">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001q.044.06.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1 1 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0"/></svg>
+                </button>
+            </div>
             <div class="form-text descripcion-articulo"></div>
         </td>
         <td><input name="Detalles[__INDEX__].Cantidad" value="1" class="form-control cantidad" type="number" min="1" /></td>
@@ -73,15 +86,57 @@
     </tr>
 </template>
 
+@* Pop-up de búsqueda de artículos por descripción (LIKE). Compartido por todas las líneas. *@
+<div class="modal fade" id="modal-buscar-articulo" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content" style="max-height:600px;">
+            <div class="modal-header">
+                <h5 class="modal-title">Buscar artículo</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <div class="modal-body">
+                <div class="input-group mb-3">
+                    <input type="text" id="buscar-descripcion" class="form-control" placeholder="Descripción (vacío = todos)" autocomplete="off" />
+                    <button type="button" id="buscar-boton" class="btn btn-primary">Buscar</button>
+                </div>
+                <div style="max-height:400px; overflow-y:auto;">
+                    <table class="table table-hover table-sm mb-0">
+                        <thead class="table-light" style="position:sticky; top:0;">
+                            <tr>
+                                <th style="width:35%">Código</th>
+                                <th>Descripción</th>
+                            </tr>
+                        </thead>
+                        <tbody id="buscar-resultados">
+                            <tr><td colspan="2" class="text-muted">Ingresá una descripción y presioná Buscar.</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script>
-    (function () {
+    // La inicialización espera a DOMContentLoaded: el bundle de Bootstrap se carga al final
+    // del layout, así que 'bootstrap' recién está disponible una vez parseado todo el body.
+    document.addEventListener("DOMContentLoaded", function () {
         var tabla = document.getElementById("tabla-detalle");
         var cuerpo = document.getElementById("cuerpo-detalle");
         var plantilla = document.getElementById("plantilla-linea");
         var totalGeneral = document.getElementById("total-general");
         var tipoSelect = document.getElementById("Tipo");
         var lookupUrl = tabla.getAttribute("data-lookup-url");
+        var buscarUrl = tabla.getAttribute("data-buscar-url");
         var form = tabla.closest("form");
+
+        // Estado del pop-up de búsqueda.
+        var modalEl = document.getElementById("modal-buscar-articulo");
+        var modal = new bootstrap.Modal(modalEl);
+        var inputDescripcion = document.getElementById("buscar-descripcion");
+        var botonBuscar = document.getElementById("buscar-boton");
+        var resultados = document.getElementById("buscar-resultados");
+        var filaActiva = null; // fila del detalle que abrió el pop-up
 
         function esVenta() {
             var opcion = tipoSelect.options[tipoSelect.selectedIndex];
@@ -181,11 +236,58 @@
             recalcular();
         }
 
+        // --- Pop-up de búsqueda ---
+
+        function pintarResultados(articulos) {
+            resultados.innerHTML = "";
+            if (!articulos || articulos.length === 0) {
+                resultados.innerHTML = '<tr><td colspan="2" class="text-muted">Sin resultados.</td></tr>';
+                return;
+            }
+            articulos.forEach(function (art) {
+                var tr = document.createElement("tr");
+                tr.style.cursor = "pointer";
+                tr.setAttribute("data-codigo", art.codigo);
+                tr.innerHTML = "<td>" + art.codigo + "</td><td>" + art.descripcion + "</td>";
+                resultados.appendChild(tr);
+            });
+        }
+
+        function buscar() {
+            var descripcion = inputDescripcion.value.trim();
+            resultados.innerHTML = '<tr><td colspan="2" class="text-muted">Buscando…</td></tr>';
+            fetch(buscarUrl + "?descripcion=" + encodeURIComponent(descripcion), { headers: { "Accept": "application/json" } })
+                .then(function (resp) { return resp.ok ? resp.json() : []; })
+                .then(pintarResultados)
+                .catch(function () {
+                    resultados.innerHTML = '<tr><td colspan="2" class="text-danger">No se pudo realizar la búsqueda.</td></tr>';
+                });
+        }
+
+        function elegirCodigo(codigo) {
+            if (!filaActiva) {
+                return;
+            }
+            var codigoInput = filaActiva.querySelector(".codigo");
+            codigoInput.value = codigo;
+            // Disparamos 'change' para reusar toda la lógica de la carga manual (descripción + precio).
+            codigoInput.dispatchEvent(new Event("change", { bubbles: true }));
+            modal.hide();
+        }
+
         document.getElementById("agregar-linea").addEventListener("click", agregar);
 
         cuerpo.addEventListener("click", function (e) {
             if (e.target.classList.contains("quitar-linea")) {
                 quitar(e.target.closest("tr.linea-detalle"));
+                return;
+            }
+            var lupa = e.target.closest(".buscar-articulo");
+            if (lupa) {
+                filaActiva = lupa.closest("tr.linea-detalle");
+                inputDescripcion.value = "";
+                resultados.innerHTML = '<tr><td colspan="2" class="text-muted">Ingresá una descripción y presioná Buscar.</td></tr>';
+                modal.show();
             }
         });
 
@@ -208,6 +310,21 @@
             recalcular();
         });
 
+        botonBuscar.addEventListener("click", buscar);
+        inputDescripcion.addEventListener("keydown", function (e) {
+            if (e.key === "Enter") {
+                e.preventDefault();
+                buscar();
+            }
+        });
+        resultados.addEventListener("click", function (e) {
+            var fila = e.target.closest("tr[data-codigo]");
+            if (fila) {
+                elegirCodigo(fila.getAttribute("data-codigo"));
+            }
+        });
+        modalEl.addEventListener("shown.bs.modal", function () { inputDescripcion.focus(); });
+
         // No dejamos enviar sin al menos una línea con código: el servidor igual lo rechaza,
         // pero así el usuario lo ve al instante.
         form.addEventListener("submit", function (e) {
@@ -227,5 +344,5 @@
         });
 
         recalcular();
-    })();
+    });
 </script>

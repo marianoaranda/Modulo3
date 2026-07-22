@@ -38,6 +38,14 @@ public class MovimientosController : ControllerBase
         return Ok(movimientos.Select(ToResponse));
     }
 
+    /// <summary>Sugerencia del próximo número correlativo (máximo actual + 1) para el alta.</summary>
+    [HttpGet("siguiente-numero")]
+    public async Task<ActionResult<SiguienteNumeroResponse>> SiguienteNumero(CancellationToken ct)
+    {
+        var maximo = await _db.Movimientos.MaxAsync(m => (int?)m.Numero, ct) ?? 0;
+        return Ok(new SiguienteNumeroResponse(maximo + 1));
+    }
+
     [HttpGet("{id:int}")]
     public async Task<ActionResult<MovimientoResponse>> ObtenerPorId(int id, CancellationToken ct)
     {

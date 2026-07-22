@@ -26,6 +26,9 @@ public interface IStockApiClient
 
     Task<IReadOnlyList<MovimientoDto>> ListarMovimientosAsync(CancellationToken ct = default);
 
+    /// <summary>Próximo número correlativo sugerido para dar de alta un movimiento.</summary>
+    Task<int> ObtenerSiguienteNumeroMovimientoAsync(CancellationToken ct = default);
+
     /// <summary>Devuelve el movimiento, o null si no existe.</summary>
     Task<MovimientoDto?> ObtenerMovimientoAsync(int id, CancellationToken ct = default);
 
@@ -116,6 +119,12 @@ public class StockApiClient : IStockApiClient
     {
         var movimientos = await _http.GetFromJsonAsync<List<MovimientoDto>>("api/movimientos", ct);
         return movimientos ?? new List<MovimientoDto>();
+    }
+
+    public async Task<int> ObtenerSiguienteNumeroMovimientoAsync(CancellationToken ct = default)
+    {
+        var respuesta = await _http.GetFromJsonAsync<SiguienteNumeroDto>("api/movimientos/siguiente-numero", ct);
+        return respuesta?.Numero ?? 1;
     }
 
     public async Task<MovimientoDto?> ObtenerMovimientoAsync(int id, CancellationToken ct = default)

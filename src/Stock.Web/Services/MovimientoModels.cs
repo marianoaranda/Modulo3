@@ -23,6 +23,9 @@ public record MovimientoDetalleDto(
     decimal PrecioUnitario,
     decimal PrecioTotal);
 
+/// <summary>Próximo número correlativo sugerido por la API para un alta.</summary>
+public record SiguienteNumeroDto(int Numero);
+
 /// <summary>Cuerpo de alta/modificación. El Precio Total no se manda: lo calcula la API.</summary>
 public record MovimientoPayload(
     string Tipo,

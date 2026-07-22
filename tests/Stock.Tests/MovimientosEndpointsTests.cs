@@ -132,6 +132,23 @@ public class MovimientosEndpointsTests
     }
 
     [Test]
+    public async Task SiguienteNumero_SinMovimientos_DevuelveUno()
+    {
+        var siguiente = await _client.GetFromJsonAsync<SiguienteNumero>("/api/movimientos/siguiente-numero");
+        Assert.That(siguiente!.Numero, Is.EqualTo(1));
+    }
+
+    [Test]
+    public async Task SiguienteNumero_ConMovimientos_DevuelveElMaximoMasUno()
+    {
+        await CrearArticuloAsync("A001");
+        await CrearMovimientoAsync(new MovReq("Compra", 5, DateTime.UtcNow, new() { new LineaReq("A001", 1, 10m) }));
+
+        var siguiente = await _client.GetFromJsonAsync<SiguienteNumero>("/api/movimientos/siguiente-numero");
+        Assert.That(siguiente!.Numero, Is.EqualTo(6));
+    }
+
+    [Test]
     public async Task Crear_SinDetalle_Rechaza()
     {
         // El formulario ya frena el envío sin líneas en el cliente; el servidor lo respalda.
@@ -192,6 +209,7 @@ public class MovimientosEndpointsTests
     }
 
     private record LoginPayload(string Token, DateTime ExpiraUtc, string NombreCompleto, string Perfil);
+    private record SiguienteNumero(int Numero);
     private record LineaReq(string Codigo, int Cantidad, decimal PrecioUnitario);
     private record MovReq(string Tipo, int Numero, DateTime Fecha, List<LineaReq> Detalles);
     private record LineaResp(int ArticuloId, string Codigo, string Descripcion, int Cantidad, decimal PrecioUnitario, decimal PrecioTotal);

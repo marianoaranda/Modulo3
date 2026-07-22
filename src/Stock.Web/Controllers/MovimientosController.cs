@@ -45,11 +45,26 @@ public class MovimientosController : Controller
         });
     }
 
+    /// <summary>
+    /// Búsqueda de artículos por descripción (LIKE) para el pop-up de selección de código.
+    /// Descripción vacía lista todos (hasta el tope que aplica la API). Devuelve sólo código y descripción.
+    /// </summary>
     [HttpGet]
-    public IActionResult Create()
+    public async Task<IActionResult> BuscarArticulos(string? descripcion)
     {
-        // Arranca con una línea vacía para que el formulario no aparezca sin detalle.
-        var model = new MovimientoViewModel { Detalles = { new MovimientoDetalleViewModel() } };
+        var articulos = await _api.ListarArticulosAsync(descripcion);
+        return Json(articulos.Select(a => new { a.Codigo, a.Descripcion }));
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> Create()
+    {
+        // Arranca con una línea vacía y el próximo número correlativo ya sugerido.
+        var model = new MovimientoViewModel
+        {
+            Numero = await _api.ObtenerSiguienteNumeroMovimientoAsync(),
+            Detalles = { new MovimientoDetalleViewModel() }
+        };
         return View(model);
     }
 
