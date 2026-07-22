@@ -89,7 +89,8 @@ public class StockController : ControllerBase
         {
             var saldo = saldos.GetValueOrDefault(a.ArticuloId);
             var objetivo = PedidoCalculator.NivelObjetivo(a.StockMinimo, a.PuntoPedido, a.StockIdeal, modo);
-            if (PedidoCalculator.CantidadAPedir(saldo, a.StockMinimo, objetivo, soloBajoMinimo) is int cantidad)
+            // Sólo se listan los que hay que pedir: la cantidad a pedir debe ser mayor que 0.
+            if (PedidoCalculator.CantidadAPedir(saldo, a.StockMinimo, objetivo, soloBajoMinimo) is int cantidad && cantidad > 0)
             {
                 filas.Add(new PedidoResponse(a.Codigo, a.Descripcion, cantidad));
             }

@@ -101,6 +101,21 @@ public class StockEndpointsTests
         Assert.That(filas.Single().CantidadAPedir, Is.EqualTo(3)); // 5 − 2
     }
 
+    [Test]
+    public async Task Pedido_ExcluyeLosArticulosConCantidadCero()
+    {
+        // A001 con saldo 8 e ideal 5 daría 0 => no se lista; A002 con saldo 2 e ideal 5 => pide 3.
+        await CrearArticuloAsync("A001", stockMinimo: 5, puntoPedido: 5, stockIdeal: 5);
+        await CrearArticuloAsync("A002", stockMinimo: 5, puntoPedido: 5, stockIdeal: 5);
+        await CrearMovimientoAsync(new MovReq("Compra", 1, DateTime.UtcNow, new() { new LineaReq("A001", 8, 10m) }));
+        await CrearMovimientoAsync(new MovReq("Compra", 2, DateTime.UtcNow, new() { new LineaReq("A002", 2, 10m) }));
+
+        var filas = await PedidoAsync(soloBajoMinimo: false, modo: "HastaStockIdeal");
+
+        Assert.That(filas.Select(f => f.Codigo), Is.EqualTo(new[] { "A002" }));
+        Assert.That(filas.Single().CantidadAPedir, Is.EqualTo(3));
+    }
+
     private async Task<List<PedidoFila>> PedidoAsync(bool soloBajoMinimo, string modo)
     {
         var url = $"/api/stock/pedido?soloBajoMinimo={soloBajoMinimo.ToString().ToLowerInvariant()}&modo={modo}";
