@@ -10,20 +10,22 @@
     <div class="col-auto">
         <label asp-for="CodigoInicial" class="form-label"></label>
         <div class="input-group">
-            <input asp-for="CodigoInicial" class="form-control" placeholder="Desde código" />
+            <input asp-for="CodigoInicial" class="form-control codigo-stock" placeholder="Desde código" />
             <button type="button" class="btn btn-outline-secondary buscar-articulo-stock" data-target="CodigoInicial" title="Buscar artículo" tabindex="-1">
                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001q.044.06.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1 1 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0"/></svg>
             </button>
         </div>
+        <div class="form-text descripcion-articulo"></div>
     </div>
     <div class="col-auto">
         <label asp-for="CodigoFinal" class="form-label"></label>
         <div class="input-group">
-            <input asp-for="CodigoFinal" class="form-control" placeholder="Hasta código" />
+            <input asp-for="CodigoFinal" class="form-control codigo-stock" placeholder="Hasta código" />
             <button type="button" class="btn btn-outline-secondary buscar-articulo-stock" data-target="CodigoFinal" title="Buscar artículo" tabindex="-1">
                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001q.044.06.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1 1 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0"/></svg>
             </button>
         </div>
+        <div class="form-text descripcion-articulo"></div>
     </div>
     <div class="col-auto">
         <button type="submit" class="btn btn-primary">Consultar</button>
@@ -80,6 +82,43 @@ else
 
 <script>
     document.addEventListener("DOMContentLoaded", function () {
+        // Mismo lookup por código que la carga de movimientos, para mostrar la descripción.
+        var lookupUrl = '@Url.Action("BuscarArticulo", "Movimientos")';
+
+        // Resuelve el código de un parámetro y muestra su descripción (verde) o el aviso (rojo).
+        function resolverDescripcion(input) {
+            var etiqueta = input.closest(".col-auto").querySelector(".descripcion-articulo");
+            var codigo = input.value.trim();
+
+            if (codigo === "") {
+                etiqueta.textContent = "";
+                etiqueta.className = "form-text descripcion-articulo";
+                return;
+            }
+
+            fetch(lookupUrl + "?codigo=" + encodeURIComponent(codigo), { headers: { "Accept": "application/json" } })
+                .then(function (resp) { return resp.ok ? resp.json() : null; })
+                .then(function (art) {
+                    if (!art) {
+                        etiqueta.textContent = "No existe un artículo con ese código.";
+                        etiqueta.className = "form-text descripcion-articulo text-danger";
+                    } else {
+                        etiqueta.textContent = art.descripcion;
+                        etiqueta.className = "form-text descripcion-articulo text-success";
+                    }
+                })
+                .catch(function () { /* si el lookup falla, no bloqueamos la consulta */ });
+        }
+
+        var inputs = document.querySelectorAll(".codigo-stock");
+
+        // Tipeo manual y selección por lupa (el pop-up dispara 'change') actualizan la descripción.
+        inputs.forEach(function (input) {
+            input.addEventListener("change", function () { resolverDescripcion(input); });
+            // Los códigos sugeridos por defecto también se resuelven al abrir la pantalla.
+            resolverDescripcion(input);
+        });
+
         document.querySelectorAll(".buscar-articulo-stock").forEach(function (boton) {
             boton.addEventListener("click", function () {
                 var input = document.getElementById(boton.getAttribute("data-target"));
