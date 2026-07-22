@@ -18,6 +18,33 @@ public class MovimientosController : Controller
         return View(movimientos);
     }
 
+    /// <summary>
+    /// Lookup por código para la carga del detalle (AJAX): devuelve descripción y precios
+    /// para que el formulario muestre la descripción y sugiera el precio según el tipo.
+    /// </summary>
+    [HttpGet]
+    public async Task<IActionResult> BuscarArticulo(string codigo)
+    {
+        if (string.IsNullOrWhiteSpace(codigo))
+        {
+            return NotFound();
+        }
+
+        var articulo = await _api.ObtenerArticuloPorCodigoAsync(codigo.Trim());
+        if (articulo is null)
+        {
+            return NotFound();
+        }
+
+        return Json(new
+        {
+            articulo.Codigo,
+            articulo.Descripcion,
+            articulo.PrecioCosto,
+            articulo.PrecioVenta
+        });
+    }
+
     [HttpGet]
     public IActionResult Create()
     {

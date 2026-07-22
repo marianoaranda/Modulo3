@@ -145,6 +145,28 @@ public class ArticulosEndpointsTests
         Assert.That(await respuesta.Content.ReadAsStringAsync(), Does.Contain(ArticuloValidator.OrdenDeStock));
     }
 
+    [Test]
+    public async Task ObtenerPorCodigo_ArticuloExistente_DevuelveDescripcionYPrecios()
+    {
+        // Respalda el lookup de la carga de movimientos: descripción y precios por código.
+        await CrearAsync(ArticuloValido("A001"));
+
+        var recuperado = await _client.GetFromJsonAsync<ArticuloResponse>("/api/articulos/por-codigo/A001");
+
+        Assert.That(recuperado, Is.Not.Null);
+        Assert.That(recuperado!.Descripcion, Is.EqualTo("Taladro"));
+        Assert.That(recuperado.PrecioCosto, Is.EqualTo(100m));
+        Assert.That(recuperado.PrecioVenta, Is.EqualTo(150m)); // 100 × (1 + 50/100)
+    }
+
+    [Test]
+    public async Task ObtenerPorCodigo_CodigoInexistente_Devuelve404()
+    {
+        var respuesta = await _client.GetAsync("/api/articulos/por-codigo/NOPE");
+
+        Assert.That(respuesta.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
+    }
+
     private async Task<ArticuloResponse> CrearAsync(ArticuloRequest request)
     {
         var respuesta = await _client.PostAsJsonAsync("/api/articulos", request);

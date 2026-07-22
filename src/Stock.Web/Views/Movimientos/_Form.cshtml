@@ -22,7 +22,7 @@
 
 <h2 class="h5">Detalle</h2>
 <div class="table-responsive">
-    <table class="table align-middle" id="tabla-detalle">
+    <table class="table align-middle" id="tabla-detalle" data-lookup-url="@Url.Action("BuscarArticulo", "Movimientos")">
         <thead>
             <tr>
                 <th style="width:30%">Código</th>
@@ -36,7 +36,10 @@
             @for (var i = 0; i < Model.Detalles.Count; i++)
             {
                 <tr class="linea-detalle">
-                    <td><input name="Detalles[@i].Codigo" value="@Model.Detalles[i].Codigo" class="form-control" /></td>
+                    <td>
+                        <input name="Detalles[@i].Codigo" value="@Model.Detalles[i].Codigo" class="form-control codigo" autocomplete="off" />
+                        <div class="form-text descripcion-articulo"></div>
+                    </td>
                     <td><input name="Detalles[@i].Cantidad" value="@Model.Detalles[i].Cantidad" class="form-control cantidad" type="number" min="1" /></td>
                     <td><input name="Detalles[@i].PrecioUnitario" value="@Model.Detalles[i].PrecioUnitario" class="form-control precio" type="number" step="0.01" min="0" /></td>
                     <td class="text-end total-linea">0.00</td>
@@ -59,7 +62,10 @@
 @* Fila plantilla para nuevas líneas: __INDEX__ se reemplaza por el índice real al agregar. *@
 <template id="plantilla-linea">
     <tr class="linea-detalle">
-        <td><input name="Detalles[__INDEX__].Codigo" class="form-control" /></td>
+        <td>
+            <input name="Detalles[__INDEX__].Codigo" class="form-control codigo" autocomplete="off" />
+            <div class="form-text descripcion-articulo"></div>
+        </td>
         <td><input name="Detalles[__INDEX__].Cantidad" value="1" class="form-control cantidad" type="number" min="1" /></td>
         <td><input name="Detalles[__INDEX__].PrecioUnitario" value="0" class="form-control precio" type="number" step="0.01" min="0" /></td>
         <td class="text-end total-linea">0.00</td>
@@ -69,9 +75,18 @@
 
 <script>
     (function () {
+        var tabla = document.getElementById("tabla-detalle");
         var cuerpo = document.getElementById("cuerpo-detalle");
         var plantilla = document.getElementById("plantilla-linea");
         var totalGeneral = document.getElementById("total-general");
+        var tipoSelect = document.getElementById("Tipo");
+        var lookupUrl = tabla.getAttribute("data-lookup-url");
+        var form = tabla.closest("form");
+
+        function esVenta() {
+            var opcion = tipoSelect.options[tipoSelect.selectedIndex];
+            return (opcion ? opcion.text : "").trim().toLowerCase() === "venta";
+        }
 
         function renumerar() {
             cuerpo.querySelectorAll("tr.linea-detalle").forEach(function (fila, i) {
@@ -91,6 +106,64 @@
                 total += sub;
             });
             totalGeneral.textContent = total.toFixed(2);
+        }
+
+        // Aplica a la fila el precio sugerido según el tipo (compra: costo, venta: venta),
+        // pero sólo si el usuario no lo editó a mano desde la última sugerencia.
+        function aplicarPrecioSugerido(fila) {
+            var precioInput = fila.querySelector(".precio");
+            var costo = precioInput.getAttribute("data-costo");
+            var venta = precioInput.getAttribute("data-venta");
+            if (costo === null || venta === null) {
+                return;
+            }
+
+            var sugerido = esVenta() ? venta : costo;
+            var autoAnterior = precioInput.getAttribute("data-auto");
+            if (autoAnterior === null || precioInput.value === autoAnterior) {
+                precioInput.value = sugerido;
+                precioInput.setAttribute("data-auto", sugerido);
+            }
+        }
+
+        function mostrarDescripcion(fila, texto, esError) {
+            var etiqueta = fila.querySelector(".descripcion-articulo");
+            var codigoInput = fila.querySelector(".codigo");
+            etiqueta.textContent = texto;
+            etiqueta.classList.toggle("text-danger", !!esError);
+            etiqueta.classList.toggle("text-success", !esError && !!texto);
+            codigoInput.classList.toggle("is-invalid", !!esError);
+        }
+
+        // Resuelve el código contra la API: muestra la descripción y sugiere el precio.
+        function resolverCodigo(fila) {
+            var codigoInput = fila.querySelector(".codigo");
+            var codigo = codigoInput.value.trim();
+            var precioInput = fila.querySelector(".precio");
+
+            if (codigo === "") {
+                precioInput.removeAttribute("data-costo");
+                precioInput.removeAttribute("data-venta");
+                mostrarDescripcion(fila, "", false);
+                return;
+            }
+
+            fetch(lookupUrl + "?codigo=" + encodeURIComponent(codigo), { headers: { "Accept": "application/json" } })
+                .then(function (resp) { return resp.ok ? resp.json() : null; })
+                .then(function (art) {
+                    if (!art) {
+                        precioInput.removeAttribute("data-costo");
+                        precioInput.removeAttribute("data-venta");
+                        mostrarDescripcion(fila, "No existe un artículo con ese código.", true);
+                        return;
+                    }
+                    precioInput.setAttribute("data-costo", art.precioCosto);
+                    precioInput.setAttribute("data-venta", art.precioVenta);
+                    mostrarDescripcion(fila, art.descripcion, false);
+                    aplicarPrecioSugerido(fila);
+                    recalcular();
+                })
+                .catch(function () { /* si el lookup falla, la validación del servidor sigue cubriendo el caso */ });
         }
 
         function agregar() {
@@ -119,6 +192,37 @@
         cuerpo.addEventListener("input", function (e) {
             if (e.target.classList.contains("cantidad") || e.target.classList.contains("precio")) {
                 recalcular();
+            }
+        });
+
+        // El lookup se dispara al salir del campo código (no en cada tecla).
+        cuerpo.addEventListener("change", function (e) {
+            if (e.target.classList.contains("codigo")) {
+                resolverCodigo(e.target.closest("tr.linea-detalle"));
+            }
+        });
+
+        // Al cambiar el tipo, refrescamos el precio sugerido de cada línea ya resuelta.
+        tipoSelect.addEventListener("change", function () {
+            cuerpo.querySelectorAll("tr.linea-detalle").forEach(aplicarPrecioSugerido);
+            recalcular();
+        });
+
+        // No dejamos enviar sin al menos una línea con código: el servidor igual lo rechaza,
+        // pero así el usuario lo ve al instante.
+        form.addEventListener("submit", function (e) {
+            var conCodigo = Array.from(cuerpo.querySelectorAll(".codigo"))
+                .some(function (input) { return input.value.trim() !== ""; });
+            if (!conCodigo) {
+                e.preventDefault();
+                alert("Agregá al menos una línea de detalle con su código.");
+            }
+        });
+
+        // Resolvemos las líneas que vienen precargadas (edición) para mostrar su descripción.
+        cuerpo.querySelectorAll("tr.linea-detalle").forEach(function (fila) {
+            if (fila.querySelector(".codigo").value.trim() !== "") {
+                resolverCodigo(fila);
             }
         });
 

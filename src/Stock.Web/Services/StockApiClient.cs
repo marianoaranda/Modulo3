@@ -15,6 +15,9 @@ public interface IStockApiClient
     /// <summary>Devuelve el artículo, o null si no existe.</summary>
     Task<ArticuloDto?> ObtenerArticuloAsync(int id, CancellationToken ct = default);
 
+    /// <summary>Busca un artículo por su Código; null si no existe. Usado en la carga de movimientos.</summary>
+    Task<ArticuloDto?> ObtenerArticuloPorCodigoAsync(string codigo, CancellationToken ct = default);
+
     Task<GuardarArticuloResultado> CrearArticuloAsync(ArticuloPayload articulo, CancellationToken ct = default);
 
     Task<GuardarArticuloResultado> ModificarArticuloAsync(int id, ArticuloPayload articulo, CancellationToken ct = default);
@@ -68,6 +71,19 @@ public class StockApiClient : IStockApiClient
     public async Task<ArticuloDto?> ObtenerArticuloAsync(int id, CancellationToken ct = default)
     {
         var respuesta = await _http.GetAsync($"api/articulos/{id}", ct);
+
+        if (respuesta.StatusCode == HttpStatusCode.NotFound)
+        {
+            return null;
+        }
+
+        respuesta.EnsureSuccessStatusCode();
+        return await respuesta.Content.ReadFromJsonAsync<ArticuloDto>(cancellationToken: ct);
+    }
+
+    public async Task<ArticuloDto?> ObtenerArticuloPorCodigoAsync(string codigo, CancellationToken ct = default)
+    {
+        var respuesta = await _http.GetAsync($"api/articulos/por-codigo/{Uri.EscapeDataString(codigo)}", ct);
 
         if (respuesta.StatusCode == HttpStatusCode.NotFound)
         {

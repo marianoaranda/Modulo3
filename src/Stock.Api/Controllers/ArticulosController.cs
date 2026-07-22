@@ -46,6 +46,18 @@ public class ArticulosController : ControllerBase
         return articulo is null ? NotFound() : Ok(ToResponse(articulo));
     }
 
+    /// <summary>
+    /// Búsqueda puntual por Código para la carga de movimientos: el formulario la usa
+    /// para mostrar la descripción y sugerir el precio (costo o venta) al tipear el código.
+    /// </summary>
+    [HttpGet("por-codigo/{codigo}")]
+    public async Task<ActionResult<ArticuloResponse>> ObtenerPorCodigo(string codigo)
+    {
+        var buscado = codigo.Trim();
+        var articulo = await _db.Articulos.AsNoTracking().SingleOrDefaultAsync(a => a.Codigo == buscado);
+        return articulo is null ? NotFound() : Ok(ToResponse(articulo));
+    }
+
     /// <summary>Alta de artículo (RF-13).</summary>
     [HttpPost]
     public async Task<ActionResult<ArticuloResponse>> Crear(ArticuloRequest request)

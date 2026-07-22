@@ -132,6 +132,17 @@ public class MovimientosEndpointsTests
     }
 
     [Test]
+    public async Task Crear_SinDetalle_Rechaza()
+    {
+        // El formulario ya frena el envío sin líneas en el cliente; el servidor lo respalda.
+        var respuesta = await _client.PostAsJsonAsync("/api/movimientos",
+            new MovReq("Compra", 1, DateTime.UtcNow, new()));
+
+        Assert.That(respuesta.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
+        Assert.That(await respuesta.Content.ReadAsStringAsync(), Does.Contain(MovimientoValidator.SinDetalle));
+    }
+
+    [Test]
     public async Task Crear_ConCodigoDeArticuloInexistente_Rechaza()
     {
         // RF-20: el detalle debe referir a un artículo que exista.
