@@ -63,7 +63,8 @@ public class MovimientosController : Controller
         var model = new MovimientoViewModel
         {
             Numero = await _api.ObtenerSiguienteNumeroMovimientoAsync(),
-            Detalles = { new MovimientoDetalleViewModel() }
+            // Cantidad 1 para que la primera línea arranque igual que las que agrega el JS.
+            Detalles = { new MovimientoDetalleViewModel { Cantidad = 1 } }
         };
         return View(model);
     }
