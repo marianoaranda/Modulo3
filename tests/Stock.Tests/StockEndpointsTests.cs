@@ -74,6 +74,39 @@ public class StockEndpointsTests
         Assert.That(filas.Select(f => f.Codigo), Is.EqualTo(new[] { "A002", "A003" }));
     }
 
+    [Test]
+    public async Task Pedido_NoSoloBajoMinimo_HastaStockIdeal_IncluyeConCantidad()
+    {
+        // AC-33 (RF-26): ideal 20, saldo 3 => pide 17.
+        await CrearArticuloAsync("A001", stockMinimo: 5, puntoPedido: 10, stockIdeal: 20);
+        await CrearMovimientoAsync(new MovReq("Compra", 1, DateTime.UtcNow, new() { new LineaReq("A001", 3, 10m) }));
+
+        var filas = await PedidoAsync(soloBajoMinimo: false, modo: "HastaStockIdeal");
+
+        Assert.That(filas.Single(f => f.Codigo == "A001").CantidadAPedir, Is.EqualTo(17));
+    }
+
+    [Test]
+    public async Task Pedido_SoloBajoMinimo_ExcluyeLosQueNoEstanBajoMinimo()
+    {
+        // AC-34 (RF-26): A001 con saldo 10 (>= mínimo 5) queda afuera; A002 con saldo 2 entra.
+        await CrearArticuloAsync("A001", stockMinimo: 5, puntoPedido: 10, stockIdeal: 20);
+        await CrearArticuloAsync("A002", stockMinimo: 5, puntoPedido: 10, stockIdeal: 20);
+        await CrearMovimientoAsync(new MovReq("Compra", 1, DateTime.UtcNow, new() { new LineaReq("A001", 10, 10m) }));
+        await CrearMovimientoAsync(new MovReq("Compra", 2, DateTime.UtcNow, new() { new LineaReq("A002", 2, 10m) }));
+
+        var filas = await PedidoAsync(soloBajoMinimo: true, modo: "HastaStockMinimo");
+
+        Assert.That(filas.Select(f => f.Codigo), Is.EqualTo(new[] { "A002" }));
+        Assert.That(filas.Single().CantidadAPedir, Is.EqualTo(3)); // 5 − 2
+    }
+
+    private async Task<List<PedidoFila>> PedidoAsync(bool soloBajoMinimo, string modo)
+    {
+        var url = $"/api/stock/pedido?soloBajoMinimo={soloBajoMinimo.ToString().ToLowerInvariant()}&modo={modo}";
+        return (await _client.GetFromJsonAsync<List<PedidoFila>>(url))!;
+    }
+
     private async Task<List<StockFila>> ConsultarAsync(string? desde = null, string? hasta = null)
     {
         var parametros = new List<string>();
@@ -84,10 +117,10 @@ public class StockEndpointsTests
         return (await _client.GetFromJsonAsync<List<StockFila>>(url))!;
     }
 
-    private async Task CrearArticuloAsync(string codigo)
+    private async Task CrearArticuloAsync(string codigo, int stockMinimo = 0, int puntoPedido = 0, int stockIdeal = 0)
     {
         var respuesta = await _client.PostAsJsonAsync("/api/articulos",
-            new { codigo, descripcion = "Artículo " + codigo, precioCosto = 10m, margen = 50m, stockMinimo = 0, puntoPedido = 0, stockIdeal = 0 });
+            new { codigo, descripcion = "Artículo " + codigo, precioCosto = 10m, margen = 50m, stockMinimo, puntoPedido, stockIdeal });
         respuesta.EnsureSuccessStatusCode();
     }
 
@@ -110,4 +143,5 @@ public class StockEndpointsTests
     private record LineaReq(string Codigo, int Cantidad, decimal PrecioUnitario);
     private record MovReq(string Tipo, int Numero, DateTime Fecha, List<LineaReq> Detalles);
     private record StockFila(string Codigo, string Descripcion, int Cantidad);
+    private record PedidoFila(string Codigo, string Descripcion, int CantidadAPedir);
 }

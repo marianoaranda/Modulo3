@@ -1,0 +1,69 @@
+@using Stock.Web.Services
+@model Stock.Web.Models.PedidoViewModel
+@{
+    ViewData["Title"] = "Generar Pedido";
+}
+
+<h1 class="h3 mb-4">Generar Pedido</h1>
+
+<form asp-action="Index" method="get" class="row g-3 align-items-end mb-3">
+    <input type="hidden" name="consultar" value="true" />
+    <div class="col-auto">
+        <label asp-for="Modo" class="form-label"></label>
+        <select asp-for="Modo" asp-items="Html.GetEnumSelectList<ModoPedido>()" class="form-select"></select>
+    </div>
+    <div class="col-auto">
+        <div class="form-check">
+            <input asp-for="SoloBajoMinimo" class="form-check-input" />
+            <label asp-for="SoloBajoMinimo" class="form-check-label"></label>
+        </div>
+    </div>
+    <div class="col-auto">
+        <button type="submit" class="btn btn-primary">Generar</button>
+    </div>
+    @if (Model.Consultado && Model.Filas.Count > 0)
+    {
+        <div class="col-auto">
+            <a asp-action="ExportarExcel"
+               asp-route-soloBajoMinimo="@Model.SoloBajoMinimo"
+               asp-route-modo="@Model.Modo"
+               class="btn btn-outline-success">Exportar a Excel</a>
+        </div>
+    }
+</form>
+
+@if (Model.Consultado)
+{
+    @if (Model.Filas.Count == 0)
+    {
+        <p class="text-muted">No hay artículos para pedir con estos parámetros.</p>
+    }
+    else
+    {
+        <div class="table-responsive">
+            <table class="table table-striped align-middle">
+                <thead>
+                    <tr>
+                        <th>Código</th>
+                        <th>Descripción</th>
+                        <th class="text-end">Cantidad a Pedir</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var fila in Model.Filas)
+                    {
+                        <tr>
+                            <td>@fila.Codigo</td>
+                            <td>@fila.Descripcion</td>
+                            <td class="text-end">@fila.CantidadAPedir</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+}
+else
+{
+    <p class="text-muted">Elegí el modo de pedido y, si querés, "solo bajo mínimo", y presioná Generar.</p>
+}

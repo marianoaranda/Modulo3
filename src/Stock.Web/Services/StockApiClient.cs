@@ -44,6 +44,10 @@ public interface IStockApiClient
     /// <summary>Consulta de Stock Actual (RF-25): saldo por artículo en un rango de códigos.</summary>
     Task<IReadOnlyList<StockActualDto>> ConsultarStockActualAsync(
         string? codigoInicial = null, string? codigoFinal = null, CancellationToken ct = default);
+
+    /// <summary>Generar Pedido (RF-26): cantidad a pedir por artículo según el modo y el filtro.</summary>
+    Task<IReadOnlyList<PedidoDto>> GenerarPedidoAsync(
+        bool soloBajoMinimo, ModoPedido modo, CancellationToken ct = default);
 }
 
 public class StockApiClient : IStockApiClient
@@ -199,6 +203,14 @@ public class StockApiClient : IStockApiClient
         var url = "api/stock/actual" + (parametros.Count > 0 ? "?" + string.Join("&", parametros) : string.Empty);
         var filas = await _http.GetFromJsonAsync<List<StockActualDto>>(url, ct);
         return filas ?? new List<StockActualDto>();
+    }
+
+    public async Task<IReadOnlyList<PedidoDto>> GenerarPedidoAsync(
+        bool soloBajoMinimo, ModoPedido modo, CancellationToken ct = default)
+    {
+        var url = $"api/stock/pedido?soloBajoMinimo={soloBajoMinimo.ToString().ToLowerInvariant()}&modo={modo}";
+        var filas = await _http.GetFromJsonAsync<List<PedidoDto>>(url, ct);
+        return filas ?? new List<PedidoDto>();
     }
 
     /// <summary>

@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Stock.Api.Contracts;
 using Stock.Api.Data;
+using Stock.Api.Domain;
 using Stock.Api.Services;
 
 namespace Stock.Api.Controllers;
@@ -60,6 +61,39 @@ public class StockController : ControllerBase
 
         var filas = articulos.Select(a =>
             new StockActualResponse(a.Codigo, a.Descripcion, saldos.GetValueOrDefault(a.ArticuloId)));
+
+        return Ok(filas);
+    }
+
+    /// <summary>
+    /// Generar Pedido (RF-26 / AC-31 a AC-36): cantidad a pedir por artículo según el modo y
+    /// el filtro "solo bajo mínimo". El saldo sale de los movimientos; el cálculo es puro
+    /// (PedidoCalculator). Con "solo bajo mínimo" quedan sólo los artículos por debajo del mínimo.
+    /// </summary>
+    [HttpGet("pedido")]
+    public async Task<ActionResult<IEnumerable<PedidoResponse>>> Pedido(
+        [FromQuery] bool soloBajoMinimo = false,
+        [FromQuery] ModoPedido modo = ModoPedido.HastaStockMinimo,
+        CancellationToken ct = default)
+    {
+        var articulos = await _db.Articulos.AsNoTracking()
+            .OrderBy(a => a.Codigo)
+            .Take(TopArticulos)
+            .Select(a => new { a.ArticuloId, a.Codigo, a.Descripcion, a.StockMinimo, a.PuntoPedido, a.StockIdeal })
+            .ToListAsync(ct);
+
+        var saldos = await _stock.ObtenerSaldosAsync(ct: ct);
+
+        var filas = new List<PedidoResponse>();
+        foreach (var a in articulos)
+        {
+            var saldo = saldos.GetValueOrDefault(a.ArticuloId);
+            var objetivo = PedidoCalculator.NivelObjetivo(a.StockMinimo, a.PuntoPedido, a.StockIdeal, modo);
+            if (PedidoCalculator.CantidadAPedir(saldo, a.StockMinimo, objetivo, soloBajoMinimo) is int cantidad)
+            {
+                filas.Add(new PedidoResponse(a.Codigo, a.Descripcion, cantidad));
+            }
+        }
 
         return Ok(filas);
     }
